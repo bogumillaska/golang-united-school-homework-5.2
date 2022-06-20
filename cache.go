@@ -16,7 +16,11 @@ func NewCache() Cache {
 }
 
 func NewEntry(newValue string) Entry {
-	return Entry{value: newValue, deadline: time.Now().Add(time.Duration(time.Duration.Hours(72)))}
+	return Entry{value: newValue, deadline: time.Now().AddDate(72, 0, 0)}
+}
+
+func (entry *Entry) isExpired() bool {
+	return entry.deadline.Before(time.Now())
 }
 
 func (cache Cache) Get(key string) (string, bool) {
@@ -25,7 +29,8 @@ func (cache Cache) Get(key string) (string, bool) {
 		return "", false
 	}
 
-	if entry.deadline.After(time.Now()) {
+	if entry.isExpired() {
+		delete(cache.store, key)
 		return "", false
 	}
 
@@ -38,8 +43,13 @@ func (cache *Cache) Put(key, value string) {
 
 func (cache Cache) Keys() []string {
 	keys := make([]string, 0, len(cache.store))
-	for k := range cache.store {
-		keys = append(keys, k)
+	for k, v := range cache.store {
+		if !v.isExpired() {
+			keys = append(keys, k)
+		} else {
+			delete(cache.store, k)
+		}
+
 	}
 	return keys
 }
